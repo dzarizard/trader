@@ -14,9 +14,10 @@ from pathlib import Path
 from .providers.yahoo import YahooProvider
 from .providers.stooq import StooqProvider
 from .indicators import compute_indicators
-from .rules import SignalGenerator, SignalManager
-from .macro import TimeFilter
+from .signal_engine import SignalEngine
+from .macro import TimeFilter, MacroCalendar
 from .sizing import Account, Instrument, PositionSizer, RiskManager
+from .pricing import PricingEngine, FeesModel
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,16 @@ class BacktestResult:
         self.sharpe_ratio = 0
         self.win_rate = 0
         self.profit_factor = 0
+        
+        # Enhanced metrics with costs
+        self.gross_pnl = 0.0
+        self.net_pnl = 0.0
+        self.total_costs = 0.0
+        self.avg_cost_per_trade = 0.0
+        self.net_profit_factor = 0.0
+        self.net_sharpe_ratio = 0.0
+        self.expectancy = 0.0
+        self.recovery_factor = 0.0
 
 
 class BacktestEngine:
@@ -45,8 +56,10 @@ class BacktestEngine:
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.signal_generator = SignalGenerator(config)
-        self.signal_manager = SignalManager(config)
+        self.signal_engine = SignalEngine(config.get('rules', {}))
+        self.pricing_engine = PricingEngine(config.get('rules', {}))
+        self.fees_model = FeesModel(config.get('rules', {}).get('fees', {}))
+        self.macro_calendar = MacroCalendar()
         self.time_filter = TimeFilter()
         
         # Initialize providers

@@ -1,0 +1,209 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cfd-trader-assistant"
+version = "2.0.0"
+description = "Comprehensive CFD trading signal generator with risk management and alerts"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "CFD Trader Assistant Team", email = "team@cfdtrader.com"}
+]
+maintainers = [
+    {name = "CFD Trader Assistant Team", email = "team@cfdtrader.com"}
+]
+keywords = ["trading", "cfd", "signals", "technical-analysis", "risk-management"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pandas==2.1.4",
+    "numpy==1.24.3",
+    "pydantic==2.5.0",
+    "plotly==5.17.0",
+    "streamlit==1.28.1",
+    "python-telegram-bot==20.7",
+    "requests==2.31.0",
+    "python-dotenv==1.0.0",
+    "schedule==1.2.0",
+    "APScheduler==3.10.4",
+    "vectorbt==0.25.2",
+    "yfinance==0.2.18",
+    "PyYAML==6.0.1",
+    "ta==0.10.2",
+    "slack-sdk==3.23.0",
+    "jinja2==3.1.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black==23.12.1",
+    "isort==5.13.2",
+    "flake8==6.1.0",
+    "mypy==1.7.1",
+    "pytest==7.4.3",
+    "pytest-cov==4.1.0",
+    "pytest-mock==3.12.0",
+    "pre-commit==3.6.0",
+    "jupyter==1.0.0",
+    "ipython==8.18.1",
+]
+test = [
+    "pytest==7.4.3",
+    "pytest-cov==4.1.0",
+    "pytest-mock==3.12.0",
+    "pytest-xdist==3.5.0",
+]
+docs = [
+    "sphinx==7.2.6",
+    "sphinx-rtd-theme==2.0.0",
+    "myst-parser==2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/cfd-trader/cfd-trader-assistant"
+Documentation = "https://cfd-trader-assistant.readthedocs.io"
+Repository = "https://github.com/cfd-trader/cfd-trader-assistant.git"
+Issues = "https://github.com/cfd-trader/cfd-trader-assistant/issues"
+Changelog = "https://github.com/cfd-trader/cfd-trader-assistant/blob/main/CHANGELOG.md"
+
+[project.scripts]
+cfd-trader = "main:main"
+cfd-dashboard = "app.dashboard:main"
+cfd-backtest = "app.backtest:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "tests*"]
+
+[tool.setuptools.package-data]
+app = ["*.yaml", "*.yml", "*.json"]
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["app", "tests"]
+known_third_party = ["pandas", "numpy", "pydantic", "plotly", "streamlit"]
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "ta.*",
+    "vectorbt.*",
+    "yfinance.*",
+    "streamlit.*",
+    "plotly.*",
+    "schedule.*",
+    "APScheduler.*",
+]
+ignore_missing_imports = true
+
+# pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+# Flake8 configuration
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    ".eggs",
+    "*.egg",
+]
+
+# Bandit security linter
+[tool.bandit]
+exclude_dirs = ["tests", "venv", ".venv"]
+skips = ["B101", "B601"]
+
+# Xenon complexity checker
+[tool.xenon]
+max_absolute_complexity = 10
+max_average_complexity = 6

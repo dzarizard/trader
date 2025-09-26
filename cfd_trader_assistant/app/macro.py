@@ -4,7 +4,7 @@ Macro calendar and time filters for CFD Trader Assistant.
 import yaml
 import pandas as pd
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import logging
 from pathlib import Path
 
@@ -109,7 +109,8 @@ class MacroCalendar:
         current_time: datetime,
         no_trade_minutes_before: int = 30,
         no_trade_minutes_after: int = 30,
-        impact_levels: List[str] = None
+        impact_levels: List[str] = None,
+        major_event_hours_before: int = 24
     ) -> Dict[str, Any]:
         """
         Check if trading is allowed at the current time based on macro events.
@@ -119,6 +120,7 @@ class MacroCalendar:
             no_trade_minutes_before: Minutes before event to avoid trading
             no_trade_minutes_after: Minutes after event to avoid trading
             impact_levels: Impact levels to consider for blocking
+            major_event_hours_before: Hours before major events to avoid trading
             
         Returns:
             Dictionary with 'allowed' boolean and 'reason' string
@@ -147,6 +149,30 @@ class MacroCalendar:
                 'reason': reason,
                 'blocking_event': closest_event
             }
+        
+        # Check for major events with longer no-trade window
+        major_events = ['US CPI', 'FOMC Rate Decision', 'NFP', 'GDP', 'Unemployment Rate']
+        for event in self.events:
+            if event['name'] in major_events:
+                for schedule_str in event.get('schedule', []):
+                    try:
+                        event_time = datetime.fromisoformat(schedule_str.replace('Z', '+00:00'))
+                        
+                        # Check if we're within the major event window
+                        time_to_event = (event_time - current_time).total_seconds()
+                        if 0 <= time_to_event <= (major_event_hours_before * 3600):
+                            reason = f"Trading blocked {major_event_hours_before}h before major event: {event['name']}"
+                            return {
+                                'allowed': False,
+                                'reason': reason,
+                                'blocking_event': {
+                                    'name': event['name'],
+                                    'time': event_time,
+                                    'impact': 'high'
+                                }
+                            }
+                    except ValueError as e:
+                        logger.warning(f"Invalid date format in macro config: {schedule_str}")
         
         return {
             'allowed': True,

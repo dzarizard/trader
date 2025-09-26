@@ -25,6 +25,7 @@ risk:
   max_open_signals: 5
   risk_per_trade_pct: 0.008   # 0.8%
   max_daily_loss_pct: 0.02    # 2%
+  max_correlated_positions: 2
 
 cooldowns:
   per_symbol_minutes: 30
@@ -34,6 +35,7 @@ filters:
     enabled: true
     no_trade_minutes_before: 30
     no_trade_minutes_after: 30
+    major_event_hours_before: 24
 
   volume:
     enabled: true
@@ -43,3 +45,8 @@ filters:
     enabled: true
     min_atr_pct: 0.001
     max_atr_pct: 0.05
+
+fees:
+  spread: 0.0001
+  commission: 0.0001
+  swap_rate: 0.0001

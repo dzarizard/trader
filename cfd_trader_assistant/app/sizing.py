@@ -3,25 +3,32 @@ Position sizing and risk management for CFD Trader Assistant.
 """
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from pydantic import BaseModel
 import logging
+
+from .pricing import PricingEngine, FeesModel
 
 logger = logging.getLogger(__name__)
 
 
 class PositionPlan(BaseModel):
-    """Position sizing plan."""
+    """Enhanced position sizing plan with costs."""
     size_units: float
     risk_amount: float
     risk_pct: float
     value_per_point: float
     max_loss: float
     potential_profit: float
+    net_potential_profit: float
     position_value: float
     margin_required: float
     leverage: float
+    entry_costs: float
+    exit_costs: float
+    total_costs: float
+    net_risk_reward: float
 
 
 class Instrument:
@@ -110,10 +117,12 @@ class Account:
 
 
 class PositionSizer:
-    """Position sizing calculator."""
+    """Enhanced position sizing calculator with costs."""
     
-    def __init__(self, account: Account):
+    def __init__(self, account: Account, config: Dict[str, Any]):
         self.account = account
+        self.pricing_engine = PricingEngine(config)
+        self.fees_model = FeesModel(config.get('fees', {}))
     
     def calculate_position_size(
         self,
@@ -122,7 +131,7 @@ class PositionSizer:
         current_price: float = None
     ) -> PositionPlan:
         """
-        Calculate optimal position size for a signal.
+        Calculate optimal position size for a signal with costs.
         
         Args:
             signal: Trading signal
@@ -130,7 +139,7 @@ class PositionSizer:
             current_price: Current market price (if different from entry)
             
         Returns:
-            PositionPlan with sizing details
+            PositionPlan with sizing details including costs
         """
         try:
             if current_price is None:
@@ -152,14 +161,14 @@ class PositionSizer:
             # Calculate position size based on risk
             if instrument.kind == 'fx':
                 # For FX, calculate lot size
-                pip_risk = instrument.calculate_pip_distance(current_price, signal.stop_loss)
+                pip_risk = self.pricing_engine.calculate_pip_distance(current_price, signal.stop_loss, instrument.min_step)
                 pip_value = instrument.get_pip_value(signal.side)
                 risk_per_lot = pip_risk * pip_value
                 
                 if risk_per_lot > 0:
                     lot_size = available_risk / risk_per_lot
-                    # Round to standard lot sizes (0.01, 0.1, 1.0, etc.)
-                    lot_size = self._round_to_lot_size(lot_size)
+                    # Round to standard lot sizes
+                    lot_size = self.pricing_engine.round_size(lot_size, 0.01)
                 else:
                     lot_size = 0.01  # Minimum lot size
                 
@@ -174,14 +183,14 @@ class PositionSizer:
                 if risk_per_unit_value > 0:
                     size_units = available_risk / risk_per_unit_value
                     # Round to reasonable size
-                    size_units = round(size_units, 2)
+                    size_units = self.pricing_engine.round_size(size_units, 0.1)
                 else:
                     size_units = 1.0  # Minimum size
                 
                 value_per_point = instrument.point_value
             
             # Calculate position metrics
-            position_value = instrument.calculate_position_value(size_units, current_price)
+            position_value = self.pricing_engine.calculate_position_value(current_price, size_units, value_per_point)
             risk_amount = size_units * risk_per_unit * value_per_point
             risk_pct = (risk_amount / self.account.equity) * 100
             
@@ -193,9 +202,20 @@ class PositionSizer:
             
             potential_profit = size_units * profit_per_unit * value_per_point
             
+            # Calculate costs
+            entry_costs = self.fees_model.calculate_total_costs(size_units, position_value, value_per_point)
+            exit_costs = self.fees_model.calculate_total_costs(size_units, position_value, value_per_point)
+            total_costs = entry_costs + exit_costs
+            
+            # Calculate net profit and risk-reward
+            net_potential_profit = self.fees_model.calculate_net_pnl(potential_profit, total_costs)
+            net_risk_reward = self.fees_model.calculate_net_risk_reward(
+                signal.risk_reward_ratio, entry_costs, exit_costs, risk_amount
+            )
+            
             # Calculate margin requirements
-            margin_required = position_value * instrument.margin_requirement
-            leverage = position_value / margin_required if margin_required > 0 else 0
+            margin_required = self.pricing_engine.calculate_margin_required(position_value, instrument.margin_requirement)
+            leverage = self.pricing_engine.calculate_leverage(position_value, margin_required)
             
             return PositionPlan(
                 size_units=size_units,
@@ -204,9 +224,14 @@ class PositionSizer:
                 value_per_point=value_per_point,
                 max_loss=risk_amount,
                 potential_profit=potential_profit,
+                net_potential_profit=net_potential_profit,
                 position_value=position_value,
                 margin_required=margin_required,
-                leverage=leverage
+                leverage=leverage,
+                entry_costs=entry_costs,
+                exit_costs=exit_costs,
+                total_costs=total_costs,
+                net_risk_reward=net_risk_reward
             )
             
         except Exception as e:
@@ -233,17 +258,23 @@ class PositionSizer:
             value_per_point=0.0,
             max_loss=0.0,
             potential_profit=0.0,
+            net_potential_profit=0.0,
             position_value=0.0,
             margin_required=0.0,
-            leverage=0.0
+            leverage=0.0,
+            entry_costs=0.0,
+            exit_costs=0.0,
+            total_costs=0.0,
+            net_risk_reward=0.0
         )
 
 
 class RiskManager:
-    """Risk management and portfolio monitoring."""
+    """Enhanced risk management with daily loss limits and correlation checks."""
     
-    def __init__(self, account: Account):
+    def __init__(self, account: Account, config: Dict[str, Any]):
         self.account = account
+        self.config = config
         self.active_positions = {}
         self.daily_stats = {
             'trades': 0,
@@ -253,10 +284,17 @@ class RiskManager:
             'max_drawdown': 0.0,
             'current_drawdown': 0.0
         }
+        
+        # Correlation groups for risk management
+        self.correlation_groups = {
+            'us_indices': ['SPY', 'QQQ', 'NAS100', 'SPX500', 'IWM'],
+            'fx_majors': ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD'],
+            'commodities': ['GOLD', 'SILVER', 'OIL', 'COPPER']
+        }
     
     def validate_signal(self, signal, instrument: Instrument) -> Tuple[bool, str]:
         """
-        Validate if a signal meets risk management criteria.
+        Enhanced signal validation with correlation checks.
         
         Args:
             signal: Trading signal
@@ -279,8 +317,13 @@ class RiskManager:
             if signal.symbol in self.active_positions:
                 return False, f"Already have position in {signal.symbol}"
             
+            # Check correlation limits
+            correlation_check = self._check_correlation_limits(signal.symbol)
+            if not correlation_check[0]:
+                return False, correlation_check[1]
+            
             # Calculate position size to validate risk
-            sizer = PositionSizer(self.account)
+            sizer = PositionSizer(self.account, self.config)
             position_plan = sizer.calculate_position_size(signal, instrument)
             
             # Check if position size is reasonable
@@ -295,11 +338,45 @@ class RiskManager:
             if position_plan.leverage > instrument.leverage * 1.1:  # 10% tolerance
                 return False, f"Leverage too high: {position_plan.leverage:.1f}x"
             
+            # Check net risk-reward ratio
+            if position_plan.net_risk_reward < 1.0:
+                return False, f"Net risk-reward too low: {position_plan.net_risk_reward:.2f}"
+            
             return True, "Signal validated"
             
         except Exception as e:
             logger.error(f"Error validating signal: {e}")
             return False, f"Validation error: {e}"
+    
+    def _check_correlation_limits(self, symbol: str) -> Tuple[bool, str]:
+        """Check correlation limits for the symbol."""
+        try:
+            # Find which correlation group the symbol belongs to
+            symbol_group = None
+            for group_name, symbols in self.correlation_groups.items():
+                if symbol in symbols:
+                    symbol_group = group_name
+                    break
+            
+            if symbol_group is None:
+                return True, "No correlation group found"
+            
+            # Count active positions in the same correlation group
+            group_positions = 0
+            for position_symbol in self.active_positions.keys():
+                if position_symbol in self.correlation_groups[symbol_group]:
+                    group_positions += 1
+            
+            # Check limit (max 2 positions per correlation group)
+            max_correlated = self.config.get('risk', {}).get('max_correlated_positions', 2)
+            if group_positions >= max_correlated:
+                return False, f"Too many correlated positions in {symbol_group}: {group_positions}/{max_correlated}"
+            
+            return True, "Correlation check passed"
+            
+        except Exception as e:
+            logger.error(f"Error checking correlation limits: {e}")
+            return True, "Correlation check error"
     
     def add_position(self, signal, position_plan: PositionPlan, instrument: Instrument):
         """Add a new position to tracking."""

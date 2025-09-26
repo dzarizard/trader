@@ -27,22 +27,20 @@ class YahooProvider(DataProvider):
         self,
         symbol: str,
         interval: str,
-        limit: int = 100,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None
     ) -> pd.DataFrame:
         """
-        Get OHLCV data from Yahoo Finance.
+        Get OHLCV data from Yahoo Finance with UTC timestamps.
         
         Args:
             symbol: Trading symbol
             interval: Time interval
-            limit: Maximum number of bars to return
-            start: Start datetime (optional)
-            end: End datetime (optional)
+            start: Start datetime in UTC (optional)
+            end: End datetime in UTC (optional)
             
         Returns:
-            DataFrame with OHLCV data
+            DataFrame with OHLCV data and UTC timestamps
         """
         try:
             # Map interval to yfinance format
@@ -51,17 +49,8 @@ class YahooProvider(DataProvider):
             # Create ticker object
             ticker = yf.Ticker(symbol)
             
-            # Determine period based on interval and limit
-            if start and end:
-                period = None
-            else:
-                period = self._get_period_for_limit(limit, interval)
-                start = None
-                end = None
-            
             # Fetch data
             df = ticker.history(
-                period=period,
                 interval=yf_interval,
                 start=start,
                 end=end,
@@ -74,7 +63,7 @@ class YahooProvider(DataProvider):
                 logger.warning(f"No data returned for {symbol} with interval {interval}")
                 return pd.DataFrame()
             
-            # Standardize column names and add timestamp
+            # Standardize column names
             df = df.rename(columns={
                 'Open': 'open',
                 'High': 'high',
@@ -83,15 +72,11 @@ class YahooProvider(DataProvider):
                 'Volume': 'volume'
             })
             
-            # Add timestamp column
+            # Add timestamp column (Yahoo returns timezone-naive data)
             df['timestamp'] = df.index
             
             # Reset index to make timestamp a regular column
             df = df.reset_index(drop=True)
-            
-            # Limit results if needed
-            if limit and len(df) > limit:
-                df = df.tail(limit)
             
             # Ensure proper data types
             for col in ['open', 'high', 'low', 'close']:
@@ -99,6 +84,9 @@ class YahooProvider(DataProvider):
             
             if 'volume' in df.columns:
                 df['volume'] = df['volume'].astype(float)
+            
+            # Validate and ensure UTC timestamps
+            df = self._validate_ohlcv_data(df)
             
             logger.debug(f"Retrieved {len(df)} bars for {symbol} {interval}")
             return df
@@ -152,23 +140,6 @@ class YahooProvider(DataProvider):
         }
         return mapping.get(interval, '1d')
     
-    def _get_period_for_limit(self, limit: int, interval: str) -> str:
-        """Determine appropriate period based on limit and interval."""
-        # Estimate days needed based on interval and limit
-        interval_minutes = self._interval_to_minutes(interval)
-        total_minutes = limit * interval_minutes
-        days = max(1, total_minutes // (24 * 60) + 1)
-        
-        if days <= 7:
-            return "7d"
-        elif days <= 30:
-            return "1mo"
-        elif days <= 90:
-            return "3mo"
-        elif days <= 365:
-            return "1y"
-        else:
-            return "max"
     
     def _interval_to_minutes(self, interval: str) -> int:
         """Convert interval string to minutes."""

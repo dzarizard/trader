@@ -449,15 +449,16 @@ class AlertManager:
             return False
     
     def _create_signal_message(self, signal, position_plan, instrument_config: Dict[str, Any]) -> AlertMessage:
-        """Create signal entry message."""
-        # Format entry alert content
+        """Create enhanced signal entry message."""
+        # Format entry alert content with costs
         content = f"{signal.side} {signal.symbol} @ {signal.entry_price:.4f}\n"
-        content += f"SL: {signal.stop_loss:.4f}  TP: {signal.take_profit:.4f}   RR: {signal.risk_reward_ratio:.1f}\n"
-        content += f"Risk: ${position_plan.risk_amount:.2f} ({position_plan.risk_pct:.2f}% kapitału)  Size: {position_plan.size_units:.2f}\n"
+        content += f"SL: {signal.stop_loss:.4f}  TP: {signal.take_profit:.4f}   RR(net): {signal.net_risk_reward_ratio:.1f}\n"
+        content += f"Risk: ${position_plan.risk_amount:.2f} ({position_plan.risk_pct:.2f}%)  Size: {position_plan.size_units:.2f}\n"
+        content += f"Costs: ${position_plan.total_costs:.2f}  Net P&L: ${position_plan.net_potential_profit:.2f}\n"
         content += f"{signal.why}"
         
         return AlertMessage(
-            title=f"New {signal.side} Signal",
+            title=f"🔔 New {signal.side} Signal",
             content=content,
             priority="high",
             timestamp=signal.timestamp,
@@ -465,19 +466,23 @@ class AlertManager:
             signal_type="entry"
         )
     
-    def _create_exit_message(self, signal, exit_reason: str, pnl: float = None) -> AlertMessage:
-        """Create signal exit message."""
-        content = f"{signal.side} {signal.symbol} EXIT\n"
+    def _create_exit_message(self, signal, exit_reason: str, pnl: float = None, net_pnl: float = None) -> AlertMessage:
+        """Create enhanced signal exit message."""
+        content = f"🏁 {signal.side} {signal.symbol} EXIT\n"
         content += f"Entry: {signal.entry_price:.4f}  Exit: {exit_reason}\n"
         
         if pnl is not None:
             pnl_emoji = "💰" if pnl > 0 else "💸"
-            content += f"{pnl_emoji} P&L: ${pnl:.2f}\n"
+            content += f"{pnl_emoji} Gross P&L: ${pnl:.2f}\n"
+        
+        if net_pnl is not None:
+            net_emoji = "✅" if net_pnl > 0 else "❌"
+            content += f"{net_emoji} Net P&L: ${net_pnl:.2f}\n"
         
         content += f"Reason: {exit_reason}"
         
         return AlertMessage(
-            title=f"{signal.side} Signal Exit",
+            title=f"🏁 {signal.side} Signal Exit",
             content=content,
             priority="normal",
             timestamp=datetime.now(),

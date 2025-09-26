@@ -11,6 +11,11 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import logging
+import numpy as np
+
+from .signal_engine import SignalEngine
+from .macro import MacroCalendar, TimeFilter
+from .pricing import PricingEngine, FeesModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -607,7 +612,7 @@ def main():
     # Navigation
     page = st.sidebar.selectbox(
         "Select Page",
-        ["Signals", "Charts", "Performance", "Settings"]
+        ["Signals", "Charts", "Performance", "Settings", "Macro"]
     )
     
     # System info in sidebar
@@ -636,6 +641,9 @@ def main():
     elif page == "Settings":
         render_header()
         render_settings_tab(data)
+    elif page == "Macro":
+        render_header()
+        render_macro_tab(data)
     
     # Footer
     st.markdown("---")
@@ -648,6 +656,79 @@ def main():
         """,
         unsafe_allow_html=True
     )
+
+
+def render_macro_tab(data: DashboardData):
+    """Render macro calendar tab."""
+    st.header("📅 Macro Calendar")
+    
+    # Initialize macro calendar
+    try:
+        macro_calendar = MacroCalendar()
+        current_time = datetime.now()
+        
+        # Today's events
+        st.subheader("📅 Today's Events")
+        events_today = macro_calendar.get_events_for_date(current_time)
+        
+        if events_today:
+            for event in events_today:
+                time_str = event['time'].strftime('%H:%M UTC')
+                impact_color = {
+                    'high': '🔴',
+                    'medium': '🟡', 
+                    'low': '🟢'
+                }.get(event['impact'], '⚪')
+                
+                st.write(f"{impact_color} **{event['name']}** at {time_str} ({event['impact']} impact)")
+        else:
+            st.info("No macro events scheduled for today")
+        
+        # Trading status
+        st.subheader("🚦 Trading Status")
+        macro_check = macro_calendar.is_trading_allowed(current_time)
+        
+        if macro_check['allowed']:
+            st.success(f"✅ {macro_check['reason']}")
+        else:
+            st.error(f"❌ {macro_check['reason']}")
+            if macro_check.get('blocking_event'):
+                event = macro_check['blocking_event']
+                st.warning(f"Blocking event: {event['name']} at {event['time']}")
+        
+        # Upcoming events
+        st.subheader("⏰ Upcoming Events (Next 7 Days)")
+        events_summary = macro_calendar.get_events_summary(days_ahead=7)
+        
+        if not events_summary.empty:
+            # Format the dataframe for display
+            display_df = events_summary.copy()
+            display_df['time'] = display_df['time'].dt.strftime('%Y-%m-%d %H:%M UTC')
+            display_df['hours_until'] = display_df['hours_until'].round(1)
+            display_df = display_df.rename(columns={
+                'name': 'Event',
+                'time': 'Time',
+                'impact': 'Impact',
+                'hours_until': 'Hours Until'
+            })
+            
+            st.dataframe(display_df, use_container_width=True)
+        else:
+            st.info("No upcoming macro events in the next 7 days")
+        
+        # Macro filter settings
+        st.subheader("⚙️ Macro Filter Settings")
+        with st.expander("Current Settings"):
+            st.json({
+                "enabled": True,
+                "no_trade_minutes_before": 30,
+                "no_trade_minutes_after": 30,
+                "major_event_hours_before": 24
+            })
+        
+    except Exception as e:
+        st.error(f"Error loading macro calendar: {e}")
+        logger.error(f"Error in macro tab: {e}")
 
 
 if __name__ == "__main__":

@@ -31,22 +31,20 @@ class StooqProvider(DataProvider):
         self,
         symbol: str,
         interval: str,
-        limit: int = 100,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None
     ) -> pd.DataFrame:
         """
-        Get EOD OHLCV data from Stooq.
+        Get EOD OHLCV data from Stooq with UTC timestamps.
         
         Args:
             symbol: Trading symbol
             interval: Time interval (only '1d' supported)
-            limit: Maximum number of bars to return
-            start: Start datetime (optional)
-            end: End datetime (optional)
+            start: Start datetime in UTC (optional)
+            end: End datetime in UTC (optional)
             
         Returns:
-            DataFrame with OHLCV data
+            DataFrame with OHLCV data and UTC timestamps
         """
         if interval != "1d":
             logger.warning(f"Stooq provider only supports daily data, requested: {interval}")
@@ -87,15 +85,11 @@ class StooqProvider(DataProvider):
                 'Volume': 'volume'
             })
             
-            # Convert timestamp to datetime
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            # Convert timestamp to datetime (Stooq returns UTC dates)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
             
             # Sort by timestamp (ascending)
             df = df.sort_values('timestamp')
-            
-            # Limit results if needed
-            if limit and len(df) > limit:
-                df = df.tail(limit)
             
             # Ensure proper data types
             for col in ['open', 'high', 'low', 'close']:
@@ -103,6 +97,9 @@ class StooqProvider(DataProvider):
             
             if 'volume' in df.columns:
                 df['volume'] = df['volume'].astype(float)
+            
+            # Validate and ensure UTC timestamps
+            df = self._validate_ohlcv_data(df)
             
             logger.debug(f"Retrieved {len(df)} EOD bars for {symbol}")
             return df

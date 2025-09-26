@@ -12,9 +12,12 @@ A comprehensive Python-based trading signal generator for CFD (Contract for Diff
 - **Multi-timeframe Analysis**: HTF (Higher Timeframe) for trend, LTF (Lower Timeframe) for entries
 - **Technical Indicators**: SMA, EMA, MACD, RSI, ATR, Donchian Channels, Bollinger Bands, ROC
 - **Signal Generation**: Automated LONG/SHORT signals with precise entry, SL, and TP levels
-- **Risk Management**: Position sizing, daily loss limits, maximum open signals
-- **Macro Event Filtering**: Avoids trading during high-impact economic events
-- **Multi-channel Alerts**: Telegram, Slack, and email notifications
+- **Risk Management**: Position sizing, daily loss limits, maximum open signals, correlation limits
+- **Macro Event Filtering**: Avoids trading during high-impact economic events with configurable windows
+- **Multi-channel Alerts**: Telegram, Slack, and email notifications with detailed signal information
+- **Cost Management**: Spread, commission, and swap cost calculations for net P&L
+- **Health Monitoring**: System health checks, circuit breakers, retry logic
+- **Anti Look-ahead Bias**: Proper HTF indicator shifting to prevent future data leakage
 
 ### Data Providers
 - **Yahoo Finance**: Intraday and EOD data (with delays)
@@ -157,8 +160,33 @@ python main.py dashboard --port=8501 --host=0.0.0.0
 # Check system status
 python main.py status
 
+# Check system health
+python main.py health --format=json
+
 # Run system tests
 python main.py test
+```
+
+### Using Makefile (Development)
+
+```bash
+# Setup development environment
+make dev-setup
+
+# Run tests
+make test
+
+# Start dashboard
+make dashboard
+
+# Run scanner
+make run
+
+# Format code
+make format
+
+# Clean temporary files
+make clean
 ```
 
 ### Docker Commands
@@ -311,6 +339,47 @@ cfd_trader_assistant/
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## CHANGELOG
+
+### Version 2.0.0 (Current)
+
+#### Major Improvements
+- **Unified Signal Engine**: Single engine for both live and backtest modes, eliminating inconsistencies
+- **Anti Look-ahead Bias**: Proper HTF indicator shifting to prevent future data leakage
+- **Enhanced Risk Management**: Correlation limits, improved position sizing, daily loss limits
+- **Cost Management**: Spread, commission, and swap cost calculations for realistic P&L
+- **Health Monitoring**: System health checks, circuit breakers, retry logic
+- **Macro Event Filtering**: Configurable no-trade windows around economic events
+- **Enhanced Alerts**: Detailed signal information with net P&L and cost breakdown
+- **Improved Dashboard**: New Macro tab, enhanced performance metrics
+- **Better Testing**: Comprehensive test suite with edge cases and integration tests
+
+#### Technical Improvements
+- **UTC Standardization**: All timestamps standardized to UTC across the application
+- **Data Provider Refactoring**: Unified interface with proper error handling
+- **Pricing Engine**: Advanced price rounding and validation
+- **Fees Model**: Realistic cost calculations for backtesting
+- **Signal State Management**: Anti-spam system with cooldowns
+- **Docker Improvements**: Health checks, resource limits, better configuration
+- **DevX**: Makefile, pinned dependencies, improved documentation
+
+#### New Features
+- Health check endpoint (`python main.py health`)
+- Correlation-based risk management
+- Major event pre-filtering (24h before CPI/FED/NFP)
+- Net risk-reward calculations
+- Enhanced backtest reports with cost analysis
+- Circuit breaker pattern for external services
+- Retry logic with exponential backoff
+
+### Version 1.0.0 (Initial Release)
+- Basic signal generation
+- Multi-timeframe analysis
+- Simple risk management
+- Basic alerting system
+- Streamlit dashboard
+- Backtesting framework
 
 ## Disclaimer
 

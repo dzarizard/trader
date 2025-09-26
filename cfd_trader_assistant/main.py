@@ -15,6 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 from app.scheduler import TradingScheduler
 from app.backtest import run_preset_backtest
 from app.dashboard import main as dashboard_main
+from app.health import health_monitor, get_health_endpoint
 
 # Configure logging
 logging.basicConfig(
@@ -343,6 +344,11 @@ Examples:
     # Test command
     test_parser = subparsers.add_parser('test', help='Run system tests')
     
+    # Health command
+    health_parser = subparsers.add_parser('health', help='Check system health')
+    health_parser.add_argument('--format', choices=['json', 'text'], default='json',
+                             help='Output format (default: json)')
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -365,9 +371,50 @@ Examples:
         return status_mode(args)
     elif args.command == 'test':
         return test_mode(args)
+    elif args.command == 'health':
+        return health_mode(args)
     else:
         parser.print_help()
         return 1
+
+
+def health_mode(args):
+    """Check system health."""
+    logger.info("Checking system health...")
+    
+    try:
+        health_status = health_monitor.run_health_checks()
+        
+        if args.format == 'json':
+            print(json.dumps(health_status, indent=2))
+        else:
+            # Text format
+            print(f"Overall Status: {health_status['overall_status'].upper()}")
+            print(f"Timestamp: {health_status['timestamp']}")
+            print("\nHealth Checks:")
+            
+            for check in health_status['checks']:
+                status_icon = "✅" if check['status'] == 'healthy' else "❌" if check['status'] == 'unhealthy' else "⚠️"
+                critical_mark = " (CRITICAL)" if check['critical'] else ""
+                print(f"  {status_icon} {check['name']}: {check['status']}{critical_mark}")
+                
+                if 'error' in check:
+                    print(f"    Error: {check['error']}")
+                if 'duration_ms' in check:
+                    print(f"    Duration: {check['duration_ms']:.1f}ms")
+        
+        # Return appropriate exit code
+        if health_status['overall_status'] == 'healthy':
+            return 0
+        elif health_status['overall_status'] == 'degraded':
+            return 1
+        else:
+            return 2
+            
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        print(f"❌ Health check failed: {e}")
+        return 3
 
 
 if __name__ == "__main__":
