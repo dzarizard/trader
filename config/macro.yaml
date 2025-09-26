@@ -1,0 +1,5 @@
+important_events:
+  - name: "US CPI"
+    schedule: ["2025-10-14T14:30:00Z", "2025-11-13T14:30:00Z"]
+  - name: "FOMC Rate Decision"
+    schedule: ["2025-11-05T18:00:00Z"]
