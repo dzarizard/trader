@@ -1,0 +1,28 @@
+session_timezone: "Europe/Warsaw"
+instruments:
+  - symbol: "NAS100"
+    provider: "YahooProvider"
+    yahoo_symbol: "^NDX"
+    kind: "index"
+    point_value: 1.0
+    min_step: 1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+
+  - symbol: "DAX40"
+    provider: "YahooProvider"
+    yahoo_symbol: "^GDAXI"
+    kind: "index"
+    point_value: 1.0
+    min_step: 1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+
+  - symbol: "EURUSD"
+    provider: "YahooProvider"
+    yahoo_symbol: "EURUSD=X"
+    kind: "fx"
+    pip_value: 10.0
+    min_step: 0.0001
+    ltf_interval: "5m"
+    htf_interval: "1h"
