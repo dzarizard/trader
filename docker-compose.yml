@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  scanner:
+    build: .
+    env_file: .env
+    command: ["python", "main.py", "scan", "--mode=intraday"]
+    volumes:
+      - ./:/app
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    env_file: .env
+    command: ["streamlit", "run", "cfd_trader_assistant/app/dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    restart: unless-stopped
