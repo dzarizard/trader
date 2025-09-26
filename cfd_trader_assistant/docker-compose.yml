@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Main trading scanner service
+  scanner:
+    build: .
+    container_name: cfd_trader_scanner
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: ["python", "main.py", "scan", "--mode=intraday"]
+    depends_on:
+      - dashboard
+    networks:
+      - trading_network
+
+  # Dashboard service
+  dashboard:
+    build: .
+    container_name: cfd_trader_dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: ["python", "main.py", "dashboard", "--host", "0.0.0.0", "--port", "8501"]
+    networks:
+      - trading_network
+
+  # EOD scanner service (runs once daily)
+  eod_scanner:
+    build: .
+    container_name: cfd_trader_eod
+    restart: "no"
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    command: ["python", "main.py", "scan", "--mode=eod"]
+    networks:
+      - trading_network
+
+  # Backtest service (for running backtests)
+  backtest:
+    build: .
+    container_name: cfd_trader_backtest
+    restart: "no"
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./backtest_reports:/app/backtest_reports
+    command: ["python", "main.py", "backtest", "--preset=eod_spy_qqq"]
+    networks:
+      - trading_network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: cfd_trader_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trading_network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: cfd_trader_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dashboard
+    networks:
+      - trading_network
+
+volumes:
+  redis_data:
+
+networks:
+  trading_network:
+    driver: bridge

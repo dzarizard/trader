@@ -1,0 +1,25 @@
+equity_ccy: "USD"
+initial_equity: 10000
+
+telegram:
+  enabled: true
+  bot_token: "<<UZUPEŁNIJ>>"
+  chat_id: "<<UZUPEŁNIJ>>"
+
+slack:
+  enabled: false
+  bot_token: "<<UZUPEŁNIJ>>"
+  channel: "#trading-alerts"
+
+email:
+  enabled: false
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  username: "<<UZUPEŁNIJ>>"
+  password: "<<UZUPEŁNIJ>>"
+  to_address: "<<UZUPEŁNIJ>>"
+
+risk_management:
+  max_daily_loss_pct: 0.02
+  max_open_signals: 5
+  risk_per_trade_pct: 0.008

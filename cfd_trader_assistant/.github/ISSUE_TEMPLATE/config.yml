@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Community Support
+    url: https://github.com/cfd-trader/cfd-trader-assistant/discussions
+    about: Please ask and answer questions here.
+  - name: Discord Community
+    url: https://discord.gg/cfd-trader
+    about: Join our Discord community for real-time support.
+  - name: Documentation
+    url: https://cfd-trader-assistant.readthedocs.io
+    about: Check our documentation for guides and tutorials.
+  - name: Security Issues
+    url: https://github.com/cfd-trader/cfd-trader-assistant/security/advisories/new
+    about: Report security vulnerabilities privately.

@@ -1,0 +1,45 @@
+# Global owners
+* @cfd-trader-team
+
+# Core application code
+/app/ @cfd-trader-team @senior-developers
+/main.py @cfd-trader-team @senior-developers
+
+# Configuration files
+/config/ @cfd-trader-team @devops-team
+*.yaml @cfd-trader-team @devops-team
+*.yml @cfd-trader-team @devops-team
+
+# Docker and deployment
+/Dockerfile @cfd-trader-team @devops-team
+/docker-compose.yml @cfd-trader-team @devops-team
+/.github/ @cfd-trader-team @devops-team
+
+# Documentation
+/README.md @cfd-trader-team @documentation-team
+/CHANGELOG.md @cfd-trader-team @documentation-team
+/CONTRIBUTING.md @cfd-trader-team @documentation-team
+/docs/ @cfd-trader-team @documentation-team
+
+# Tests
+/tests/ @cfd-trader-team @qa-team
+/test_* @cfd-trader-team @qa-team
+
+# Dependencies and build
+/requirements.txt @cfd-trader-team @senior-developers
+/requirements-dev.txt @cfd-trader-team @senior-developers
+/pyproject.toml @cfd-trader-team @senior-developers
+/Makefile @cfd-trader-team @senior-developers
+
+# Security and compliance
+/.github/SECURITY.md @cfd-trader-team @security-team
+/.github/CODE_OF_CONDUCT.md @cfd-trader-team @security-team
+/LICENSE @cfd-trader-team @legal-team
+
+# CI/CD
+/.github/workflows/ @cfd-trader-team @devops-team
+/.pre-commit-config.yaml @cfd-trader-team @senior-developers
+
+# Environment and configuration
+/.env.example @cfd-trader-team @devops-team
+/.gitignore @cfd-trader-team @senior-developers
