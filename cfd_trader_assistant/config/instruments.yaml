@@ -1,0 +1,80 @@
+session_timezone: "Europe/Warsaw"
+
+instruments:
+  - symbol: "NAS100"
+    provider: "YahooProvider"
+    yahoo_symbol: "^NDX"
+    kind: "index"
+    point_value: 1.0     # USD per point (CFD simulation)
+    min_step: 1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "09:30"
+      end: "16:00"
+      timezone: "America/New_York"
+
+  - symbol: "SPX500"
+    provider: "YahooProvider"
+    yahoo_symbol: "^GSPC"
+    kind: "index"
+    point_value: 1.0
+    min_step: 1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "09:30"
+      end: "16:00"
+      timezone: "America/New_York"
+
+  - symbol: "DAX40"
+    provider: "YahooProvider"
+    yahoo_symbol: "^GDAXI"
+    kind: "index"
+    point_value: 1.0
+    min_step: 1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "09:00"
+      end: "17:30"
+      timezone: "Europe/Berlin"
+
+  - symbol: "EURUSD"
+    provider: "YahooProvider"
+    yahoo_symbol: "EURUSD=X"
+    kind: "fx"
+    pip_value: 10.0      # USD per pip for 1 lot (CFD simulation)
+    min_step: 0.0001
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "00:00"
+      end: "23:59"
+      timezone: "UTC"
+
+  - symbol: "GBPUSD"
+    provider: "YahooProvider"
+    yahoo_symbol: "GBPUSD=X"
+    kind: "fx"
+    pip_value: 10.0
+    min_step: 0.0001
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "00:00"
+      end: "23:59"
+      timezone: "UTC"
+
+  - symbol: "GOLD"
+    provider: "YahooProvider"
+    yahoo_symbol: "GC=F"
+    kind: "commodity"
+    point_value: 100.0   # USD per point
+    min_step: 0.1
+    ltf_interval: "5m"
+    htf_interval: "1h"
+    trading_hours:
+      start: "00:00"
+      end: "23:59"
+      timezone: "UTC"
